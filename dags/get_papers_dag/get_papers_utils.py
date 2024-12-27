@@ -12,7 +12,7 @@ from botocore.exceptions import ClientError
 
 def scrape_pdf_to_s3(pdf_url, key, metadata=None):
     """
-    Get a pdf from a given url, and upload it to S3 with the url as its key.
+    Get a pdf from a given url and upload it to S3.
     """
     conn = boto3.client('s3')
     pdf_file = requests.get(pdf_url).content
@@ -53,9 +53,6 @@ def doi_by_title(title, author=None):
 
 
 class API_Throttler():
-    # maybe add cache later
-    # cache = {}
-
     # inspired by https://stackoverflow.com/questions/40748687/python-api-rate-limiting-how-to-limit-api-calls-globally
     def __init__(self, max_calls=50, _limit_interval=5):
         self.num_calls = 0
@@ -64,7 +61,8 @@ class API_Throttler():
         self.max_calls = max_calls
         self._limit_interval = _limit_interval
 
-    
+        self.cache = {'urls': [], 'dois': []}
+
     @property
     def limit_interval(self):
         return self._limit_interval
@@ -91,7 +89,11 @@ class API_Throttler():
             wait_time = (self.next_reset_at - now).seconds
             time.sleep(wait_time)
         
+        # make request
         response = requests.get(url)
+
+        # add url to cache and update num calls
+        self.cache['urls'].append(url)
         self.num_calls += 1
 
         return response

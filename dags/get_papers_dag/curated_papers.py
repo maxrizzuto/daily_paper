@@ -8,7 +8,7 @@ from get_papers_utils import API_Throttler, doi_by_title, scrape_pdf_to_s3
 from lxml import html
 
 with DAG(
-    dag_id="get_papers",
+    dag_id="curated_papers",
     catchup=False,
     start_date=datetime(2023, 1, 1),
     schedule="@daily",
@@ -28,7 +28,6 @@ with DAG(
         # initialize api caller
         crossref_api = API_Throttler()
 
-
         # construct tree for scraping from website
         src = 'https://github.com/rxin/db-readings'
         page = requests.get(src)
@@ -44,11 +43,17 @@ with DAG(
                 paper_link = src + paper.xpath('./@href')[0].replace('blob', 'raw')
                 paper_name = paper.text
 
-                # get article's DOI, store to dictionary
+
+                """
+                add try except that checks if this is in the cache
+                """
+
+                # get article's DOI, store to dictionary, add doi to cache
                 doi_url = doi_by_title(paper_name)
                 response = crossref_api.request(doi_url)
                 doi = response['message']['items'][0]['DOI']
-                papers[doi] = {'name': paper_name, 'category': 'databases', 'subcategory': subcat_name, 'url': paper_link}
+                papers[doi] = {'name': paper_name, 'category': 'databases', 'subcategory': subcat_name, 'url': paper_link, 'src': src}
+                crossref_api.cache['dois'].append(doi)
 
                 # update API rate limiting
                 max_calls = response.headers['X-Rate-Limit-Limit']
@@ -59,7 +64,7 @@ with DAG(
                 # get pdf and add to s3
                 scrape_pdf_to_s3(paper_link, doi, metadata=papers[doi])
 
-        print(json.dumps(papers, sort_keys=True, indent=4))
+        # print(json.dumps(papers, sort_keys=True, indent=4))
         return papers
 
     @task
