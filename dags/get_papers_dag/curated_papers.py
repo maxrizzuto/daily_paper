@@ -52,7 +52,7 @@ with DAG(
                 doi_url = doi_by_title(paper_name)
                 response = crossref_api.request(doi_url)
                 doi = response['message']['items'][0]['DOI']
-                papers[doi] = {'name': paper_name, 'category': 'databases', 'subcategory': subcat_name, 'url': paper_link, 'src': src}
+                papers[doi] = {'title': paper_name, 'category': 'databases', 'subcategory': subcat_name, 'url': paper_link, 'src': src}
                 crossref_api.cache['dois'].append(doi)
 
                 # update API rate limiting

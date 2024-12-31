@@ -77,7 +77,7 @@ class API_Throttler():
         self.next_reset_at = datetime.now() + timedelta(seconds=self.limit_interval)
 
 
-    def request(self, url):
+    def request(self, url, headers={}):
         # reset limits if interval reset
         now = datetime.now()
         if now > self.next_reset_at():
@@ -90,7 +90,7 @@ class API_Throttler():
             time.sleep(wait_time)
         
         # make request
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
 
         # add url to cache and update num calls
         self.cache['urls'].append(url)
